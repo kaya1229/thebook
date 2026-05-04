@@ -59,21 +59,22 @@
         /* [포스터 인쇄 효과] */
         #res-poster { 
             max-width: 85%; max-height: 70%; 
-            filter: sepia(0.2) contrast(0.9) brightness(1.05); /* 인쇄된 듯한 느낌 */
+            filter: sepia(0.2) contrast(0.9) brightness(1.05);
             mix-blend-mode: multiply; opacity: 0.9;
             border: 1px solid rgba(0,0,0,0.1);
         }
 
-        /* 관리자 패널 UI 수정 */
+        /* 관리자 패널 UI */
         #admin-panel { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(15, 15, 15, 0.98); border: 1px solid var(--gold); padding: 25px; z-index: 1000; border-radius: 8px; width: 500px; max-height: 85vh; overflow-y: auto; color: #eee; box-shadow: 0 0 50px rgba(0,0,0,1); }
         
+        /* 포스터 그리드: 잘림 방지 */
         .search-results { 
             display: grid; grid-template-columns: repeat(3, 1fr); 
             gap: 12px; margin: 15px 0; max-height: 250px; 
             overflow-y: auto; padding-right: 5px;
         }
         .search-item { cursor: pointer; border: 2px solid transparent; transition: 0.2s; border-radius: 4px; overflow: hidden; height: fit-content; }
-        .search-item img { width: 100%; display: block; object-fit: cover; }
+        .search-item img { width: 100%; display: block; object-fit: contain; }
         .search-item.selected { border-color: var(--gold); transform: scale(0.95); }
         
         .admin-trigger { position: fixed; bottom: 0; right: 0; width: 40px; height: 40px; cursor: default; }
@@ -238,9 +239,9 @@
 
         if (!title || !answer) return alert("정보를 모두 입력하세요.");
 
-        // 서버 404 방지를 위해 ID 존재 여부에 따라 경로 및 메소드 분리
+        // 404 에러 방지: 쿼리 스트링(?id=) 방식으로 URL 구성
         const method = id ? 'PUT' : 'POST';
-        const url = id ? `/api/dramas/${id}` : '/api/dramas';
+        const url = id ? `/api/dramas?id=${id}` : '/api/dramas';
 
         try {
             const res = await fetch(url, {
@@ -250,11 +251,11 @@
             });
 
             if (res.ok) {
-                alert(id ? "수정 완료" : "저장 완료");
-                resetAdminForm();
+                alert(id ? "수정이 완료되었습니다." : "저장이 완료되었습니다.");
+                resetAdminForm(); // 성공 시 입력창 및 포스터 결과창 초기화
                 loadData();
             } else {
-                alert("서버 오류가 발생했습니다. (Status: " + res.status + ")");
+                alert("서버 오류: " + res.status);
             }
         } catch (e) {
             alert("연결 실패: " + e.message);
@@ -269,12 +270,13 @@
         document.getElementById('selected-poster').value = item.poster_url;
         document.getElementById('manual-answer').value = item.answer;
         document.getElementById('admin-title').innerText = "ADMIN: EDIT MODE";
+        document.getElementById('admin-panel').scrollTo(0, 0);
     }
 
     function renderAdminList() {
         document.getElementById('list-container').innerHTML = dataPool.map(item => `
             <div style="display:flex; justify-content:space-between; align-items:center; background:#111; padding:8px; margin-bottom:5px; font-size:0.85rem;">
-                <span onclick="editItem('${item.id}')" style="cursor:pointer; color:var(--gold);">${item.title}</span>
+                <span onclick="editItem('${item.id}')" style="cursor:pointer; color:var(--gold); flex:1;">${item.title}</span>
                 <button onclick="deleteItem('${item.id}')" style="color:#666; background:none; border:none; cursor:pointer;">삭제</button>
             </div>
         `).join('');
@@ -282,7 +284,7 @@
 
     async function deleteItem(id) {
         if(confirm("삭제하시겠습니까?")) {
-            await fetch(`/api/dramas/${id}`, { method: 'DELETE' });
+            await fetch(`/api/dramas?id=${id}`, { method: 'DELETE' });
             loadData();
         }
     }
