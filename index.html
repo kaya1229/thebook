@@ -29,7 +29,7 @@
             overflow: hidden;
         }
 
-        /* 1. 상단 UI */
+        /* 상단 UI */
         .header-ui {
             position: absolute;
             top: 8%;
@@ -49,7 +49,7 @@
         }
         .btn-gold:hover { background: var(--gold); color: #000; box-shadow: 0 0 20px rgba(212, 175, 55, 0.4); }
 
-        /* 2. 3D 부유 및 입체 책 구조 */
+        /* 3D 책 애니메이션 */
         @keyframes floating {
             0% { transform: translateZ(0) rotateY(-25deg) rotateX(12deg) translateY(0); }
             50% { transform: translateZ(50px) rotateY(-20deg) rotateX(16deg) translateY(-15px); }
@@ -80,7 +80,6 @@
             background-image: linear-gradient(90deg, rgba(0,0,0,0.1) 1px, transparent 1px); background-size: 2px 100%;
         }
 
-        /* 3. 내부 결과 페이지 */
         .page-inner {
             position: absolute; width: 100%; height: 100%; background: var(--ivory);
             display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -88,17 +87,9 @@
             transition: opacity 0.8s ease 1.2s;
         }
 
-        .left-content { 
-            transform: rotateY(180deg); transform-origin: center; 
-            border-radius: 4px 0 0 4px; box-shadow: inset -10px 0 30px rgba(0,0,0,0.05);
-        }
+        .left-content { transform: rotateY(180deg); transform-origin: center; border-radius: 4px 0 0 4px; }
+        .right-content { border-radius: 0 4px 4px 0; border-left: 1px solid rgba(0,0,0,0.1); }
 
-        .right-content { 
-            border-radius: 0 4px 4px 0; border-left: 1px solid rgba(0,0,0,0.1); 
-            box-shadow: inset 10px 0 30px rgba(0,0,0,0.05);
-        }
-
-        /* 🎬 펼쳐진 상태: translateY(-10%)를 추가해 책을 살짝 위로 올림 */
         .book-container.active {
             animation: none;
             transform: rotateY(0deg) rotateX(0deg) translateZ(150px) translateX(50%) translateY(-10%);
@@ -106,42 +97,23 @@
         .book-container.active .front { transform: translateZ(calc(var(--book-t) / 2)) rotateY(-175deg); }
         .book-container.active .page-inner { opacity: 1; }
 
-        /* 결과 상세 */
         .poster-box { width: 100%; height: 320px; display: flex; justify-content: center; align-items: center; }
         .poster-box img { max-width: 90%; max-height: 100%; box-shadow: 0 15px 35px rgba(0,0,0,0.4); }
         .answer-txt { font-family: "Gungsuh", "궁서", serif; font-size: 2.2rem; text-align: center; line-height: 1.6; word-break: keep-all; }
         
-        /* 🎬 새로운 질문 던지기 버튼 */
-        #retry-btn { 
-            position: absolute; 
-            bottom: 12%; 
-            opacity: 0; 
-            transition: opacity 1s ease-in-out, transform 0.5s ease; 
-            z-index: 200; 
-            pointer-events: none;
-            transform: translateY(20px);
-        }
-        #retry-btn.show { 
-            opacity: 1; 
-            pointer-events: auto; 
-            transform: translateY(0);
-        }
+        #retry-btn { position: absolute; bottom: 12%; opacity: 0; transition: 1s; z-index: 200; pointer-events: none; }
+        #retry-btn.show { opacity: 1; pointer-events: auto; }
 
-        /* 관리자 패널 스타일 */
         #admin-panel {
             display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
             background: rgba(10, 10, 10, 0.98); border: 1px solid var(--gold); padding: 30px;
-            z-index: 1000; border-radius: 8px; width: 380px; box-shadow: 0 0 50px rgba(0,0,0,1);
+            z-index: 1000; border-radius: 8px; width: 380px;
         }
         #admin-panel input, #admin-panel textarea {
             width: 100%; padding: 12px; margin-bottom: 15px; background: #1a1a1a;
-            border: 1px solid #333; color: #fff; font-family: inherit; box-sizing: border-box;
-            outline: none;
+            border: 1px solid #333; color: #fff; box-sizing: border-box; outline: none;
         }
-        .admin-trigger {
-            position: fixed; bottom: 0; right: 0; width: 40px; height: 40px;
-            cursor: default; opacity: 0; z-index: 999;
-        }
+        .admin-trigger { position: fixed; bottom: 0; right: 0; width: 40px; height: 40px; cursor: default; opacity: 0; z-index: 999; }
     </style>
 </head>
 <body>
@@ -184,10 +156,8 @@
 
 <button id="retry-btn" class="btn-gold" onclick="location.reload()">새로운 질문 던지기</button>
 
-<!-- 관리자 모드 진입용 숨겨진 버튼 (우측 하단 구석) -->
 <div class="admin-trigger" onclick="checkAdmin()"></div>
 
-<!-- 관리자 패널 UI -->
 <div id="admin-panel">
     <h2 style="margin: 0 0 20px 0; font-weight: 300; letter-spacing: 2px; color: var(--gold);">ADMIN MODE</h2>
     <input type="text" id="tmdb-query" placeholder="드라마 제목 검색">
@@ -199,86 +169,69 @@
     <p id="admin-status" style="font-size: 0.8rem; margin-top: 15px; color: #888;"></p>
 </div>
 
-<!-- Supabase SDK 추가 -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 <script>
-    // 1. Supabase 설정 (본인의 정보로 교체 필수)
-    const supabaseUrl = 'YOUR_SUPABASE_URL';
-    const supabaseKey = 'YOUR_SUPABASE_ANON_KEY';
-    const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
-
     let dataPool = [];
 
-    // 페이지 로드 시 Supabase DB에서 데이터 가져오기
+    // 페이지 로드 시 우리 서버 API(/api/dramas) 호출
     window.onload = async () => {
-        const { data, error } = await _supabase.from('dramas').select('*');
-        if (data && data.length > 0) {
-            // 가져온 데이터를 기존 dataPool 형식에 맞게 맵핑
-            dataPool = data.map(d => ({ 
-                t: d.title, 
-                a: d.answer, 
-                p: d.poster_url 
-            }));
-        } else {
-            // DB가 비어있을 경우 초기 데이터 표시
-            dataPool = [
-                { t: "데이터 없음", a: "관리자 모드에서 드라마를 추가해주세요.", p: "https://via.placeholder.com/220x310/161b22/d4af37?text=Empty" }
-            ];
+        try {
+            const res = await fetch('/api/dramas');
+            const data = await res.json();
+            if (data && data.length > 0) {
+                dataPool = data.map(d => ({ t: d.title, a: d.answer, p: d.poster_url }));
+            } else {
+                dataPool = [{ t: "데이터 없음", a: "관리자 모드에서 추가해주세요.", p: "" }];
+            }
+        } catch (e) {
+            console.error("데이터 로드 실패:", e);
         }
     };
 
     function checkAdmin() {
-        const pw = prompt("관리자 암호를 입력하세요.");
-        if (pw === "1234") { // 비밀번호 설정
+        if (prompt("관리자 암호를 입력하세요.") === "1234") {
             document.getElementById('admin-panel').style.display = 'block';
         }
     }
 
     function closeAdmin() {
         document.getElementById('admin-panel').style.display = 'none';
-        document.getElementById('admin-status').innerText = "";
     }
 
-    // Vercel Serverless Function(/api/search)을 통해 TMDB 검색 및 DB 저장
     async function fetchDrama() {
         const query = document.getElementById('tmdb-query').value;
         const answer = document.getElementById('manual-answer').value;
         const status = document.getElementById('admin-status');
 
-        if (!query || !answer) return alert("내용을 모두 입력해주세요.");
-        status.innerText = "TMDB에서 데이터를 찾는 중...";
+        if (!query || !answer) return alert("입력 필요");
+        status.innerText = "검색 중...";
 
         try {
-            // Vercel API Route 호출 (API Key가 서버에 숨겨져 있음)
-            const res = await fetch(`/api/search?query=${encodeURIComponent(query)}`);
-            const searchData = await res.json();
+            // 1. TMDB 검색 (기존 API 활용)
+            const searchRes = await fetch(`/api/search?query=${encodeURIComponent(query)}`);
+            const searchData = await searchRes.json();
 
-            if (searchData.results && searchData.results.length > 0) {
+            if (searchData.results?.length > 0) {
                 const item = searchData.results[0];
                 const posterPath = `https://image.tmdb.org/t/p/w500${item.poster_path}`;
                 
-                status.innerText = "드라마 발견! Supabase에 저장 중...";
+                status.innerText = "저장 중...";
 
-                // Supabase 'dramas' 테이블에 저장
-                const { error } = await _supabase.from('dramas').insert([
-                    { title: item.name, answer: answer, poster_url: posterPath }
-                ]);
+                // 2. 우리 서버 API(/api/dramas)로 데이터 전송
+                const saveRes = await fetch('/api/dramas', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title: item.name, answer: answer, poster_url: posterPath })
+                });
 
-                if (!error) {
-                    status.innerText = `성공: [${item.name}] 추가 완료.`;
-                    document.getElementById('tmdb-query').value = "";
-                    document.getElementById('manual-answer').value = "";
-                    // 1.5초 후 데이터 갱신을 위해 새로고침
-                    setTimeout(() => location.reload(), 1500);
-                } else {
-                    status.innerText = "Supabase 저장 실패: " + error.message;
+                if (saveRes.ok) {
+                    status.innerText = "저장 완료!";
+                    setTimeout(() => location.reload(), 1000);
                 }
             } else {
-                status.innerText = "검색 결과가 없습니다.";
+                status.innerText = "결과 없음";
             }
         } catch (e) {
-            status.innerText = "통신 오류 발생: " + e.message;
+            status.innerText = "오류: " + e.message;
         }
     }
 
@@ -289,7 +242,7 @@
 
     function launch(mode) {
         const q = document.getElementById('q-input').value;
-        if(!q) return alert("당신의 고민을 적어주셔야 해답을 찾을 수 있습니다.");
+        if(!q) return alert("고민을 적어주세요.");
 
         const shuffled = [...dataPool].sort(() => Math.random() - 0.5);
         let idx = mode === 'random' ? Math.floor(Math.random() * 500) : document.getElementById('p-num').value;
@@ -301,9 +254,7 @@
 
         document.getElementById('ui-main').style.opacity = '0';
         document.getElementById('ui-main').style.pointerEvents = 'none';
-        
-        const book = document.getElementById('oracle-book');
-        book.classList.add('active');
+        document.getElementById('oracle-book').classList.add('active');
 
         setTimeout(() => {
             document.getElementById('cover-art').style.visibility = 'hidden';
@@ -311,6 +262,5 @@
         }, 1500);
     }
 </script>
-
 </body>
 </html>
