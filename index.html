@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <title>The Cinematic Oracle</title>
     <style>
-        /* 기본 폰트: 깔끔한 산세리프 / 해답 문구만 궁서체 */
         body, input, textarea, button { font-family: 'Pretendard', -apple-system, sans-serif; }
         .gungsuh { font-family: 'Gungsuh', '궁서', serif !important; }
 
@@ -13,7 +12,6 @@
             --cover-color: #161b22; --gold: #d4af37; --ivory: #fcf9f2;
         }
 
-        /* [스크롤바 커스텀] */
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-track { background: #0a0a0a; }
         ::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 10px; }
@@ -38,7 +36,6 @@
         #manual-input-ui { display: none; margin-top: 15px; animation: fadeIn 0.5s; }
         .num-input { background: #111; border: 1px solid var(--gold); color: var(--gold); width: 60px; padding: 8px; text-align: center; font-size: 1rem; outline: none; }
 
-        /* 책 구조 */
         .book-container { 
             width: var(--book-w); height: var(--book-h); position: relative; transform-style: preserve-3d; 
             transition: 2.5s; animation: float 6s ease-in-out infinite; 
@@ -50,33 +47,28 @@
         .spine { width: var(--book-t); height: 100%; left: calc(var(--book-t) / -2); transform: rotateY(-90deg); background: #0c1117; }
         .side-paper { background: #e2ded0; width: calc(var(--book-t) - 2px); height: calc(100% - 4px); right: calc(var(--book-t) / -2); top: 2px; transform: rotateY(90deg); }
         
-        .page-inner { position: absolute; width: 100%; height: 100%; background: var(--ivory); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; box-sizing: border-box; color: #1a1a1a; opacity: 0; transition: opacity 0.8s ease 1.2s; }
+        /* 페이지 내용 초기 투명도 0 */
+        .page-inner { position: absolute; width: 100%; height: 100%; background: var(--ivory); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; box-sizing: border-box; color: #1a1a1a; opacity: 0; transition: opacity 0.5s ease; }
         .left-content { transform: rotateY(180deg); border-radius: 4px 0 0 4px; }
         .right-content { border-radius: 0 4px 4px 0; border-left: 1px solid rgba(0,0,0,0.1); }
+        
+        /* 활성화될 때 투명도 조절 (딜레이 추가) */
         .book-container.active .front { transform: translateZ(calc(var(--book-t) / 2)) rotateY(-175deg); }
-        .book-container.active .page-inner { opacity: 1; }
+        .book-container.active .page-inner { opacity: 1; transition: opacity 0.8s ease 1.2s; }
 
-        /* [포스터 인쇄 효과] */
-        #res-poster { 
-            max-width: 85%; max-height: 70%; 
-            filter: sepia(0.2) contrast(0.9) brightness(1.05);
-            mix-blend-mode: multiply; opacity: 0.9;
-            border: 1px solid rgba(0,0,0,0.1);
-        }
+        #res-poster { max-width: 85%; max-height: 70%; filter: sepia(0.2) contrast(0.9) brightness(1.05); mix-blend-mode: multiply; opacity: 0.9; border: 1px solid rgba(0,0,0,0.1); }
 
-        /* 관리자 패널 UI */
+        /* 관리자 패널 */
         #admin-panel { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(15, 15, 15, 0.98); border: 1px solid var(--gold); padding: 25px; z-index: 1000; border-radius: 8px; width: 500px; max-height: 85vh; overflow-y: auto; color: #eee; box-shadow: 0 0 50px rgba(0,0,0,1); }
-        
-        /* 포스터 그리드: 잘림 방지 */
-        .search-results { 
-            display: grid; grid-template-columns: repeat(3, 1fr); 
-            gap: 12px; margin: 15px 0; max-height: 250px; 
-            overflow-y: auto; padding-right: 5px;
-        }
-        .search-item { cursor: pointer; border: 2px solid transparent; transition: 0.2s; border-radius: 4px; overflow: hidden; height: fit-content; }
+        .search-results { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 15px 0; max-height: 250px; overflow-y: auto; }
+        .search-item { cursor: pointer; border: 2px solid transparent; border-radius: 4px; overflow: hidden; }
         .search-item img { width: 100%; display: block; object-fit: contain; }
-        .search-item.selected { border-color: var(--gold); transform: scale(0.95); }
+        .search-item.selected { border-color: var(--gold); }
         
+        /* 관리자 리스트 검색창 */
+        .admin-list-search { width: 100%; padding: 8px; margin-bottom: 10px; background: #000; border: 1px solid #444; color: var(--gold); outline: none; }
+        .pagination-ui { display: flex; justify-content: center; align-items: center; gap: 20px; margin-top: 15px; }
+
         .admin-trigger { position: fixed; bottom: 0; right: 0; width: 40px; height: 40px; cursor: default; }
         #retry-btn { position: absolute; bottom: 8%; opacity: 0; pointer-events: none; transition: 1s; z-index: 200; }
         #retry-btn.show { opacity: 1; pointer-events: auto; }
@@ -128,25 +120,37 @@
         <input type="text" id="tmdb-query" placeholder="드라마 제목 검색..." style="flex:1; padding:8px; background:#222; border:1px solid #444; color:#fff; outline: none;">
         <button class="btn-gold" onclick="searchTMDB()" style="margin:0;">검색</button>
     </div>
-    
     <div id="search-results" class="search-results"></div>
+    <hr style="border:0; border-top:1px solid #333; margin:15px 0;">
     
     <input type="hidden" id="edit-id">
-    <input type="text" id="selected-title" placeholder="선택된 드라마" readonly style="width:100%; margin:10px 0; padding:10px; background:#111; border:1px solid #333; color:var(--gold); box-sizing: border-box;">
+    <input type="text" id="selected-title" placeholder="선택된 드라마" readonly style="width:100%; margin-bottom:10px; padding:10px; background:#111; border:1px solid #333; color:var(--gold); box-sizing: border-box;">
     <input type="hidden" id="selected-poster">
-    <textarea id="manual-answer" placeholder="해답 문구를 입력하세요..." rows="3" style="width:100%; margin-bottom:15px; padding:10px; background:#222; border:1px solid #444; color:#fff; box-sizing: border-box; outline: none;"></textarea>
+    <textarea id="manual-answer" placeholder="해답 문구를 입력하세요..." rows="3" style="width:100%; margin-bottom:10px; padding:10px; background:#222; border:1px solid #444; color:#fff; box-sizing: border-box; outline: none;"></textarea>
     
     <div style="display:flex; gap:10px;">
         <button class="btn-gold" style="flex:1" onclick="handleSave()">데이터 저장</button>
         <button class="btn-gold" style="flex:1; border-color:#444;" onclick="resetAdminForm()">초기화</button>
     </div>
 
-    <div id="list-container" style="margin-top:20px; border-top:1px solid #333; padding-top:15px;"></div>
-    <button class="btn-gold" style="width:100%; margin-top:10px; border-color:#444;" onclick="document.getElementById('admin-panel').style.display='none'">닫기</button>
+    <!-- 저장된 기록 섹션 -->
+    <div style="margin-top:25px; border-top:1px solid var(--gold); padding-top:15px;">
+        <p style="font-size:0.8rem; color:var(--gold); margin-bottom:8px;">SAVED RECORDS</p>
+        <input type="text" id="admin-list-search" class="admin-list-search" placeholder="저장된 제목 검색..." oninput="currentPage=1; renderAdminList();">
+        <div id="list-container"></div>
+        <div class="pagination-ui">
+            <button class="btn-gold" style="padding:4px 10px;" onclick="changePage(-1)">이전</button>
+            <span id="page-info" style="font-size:0.8rem;">1 / 1</span>
+            <button class="btn-gold" style="padding:4px 10px;" onclick="changePage(1)">다음</button>
+        </div>
+    </div>
+    <button class="btn-gold" style="width:100%; margin-top:20px; border-color:#444;" onclick="document.getElementById('admin-panel').style.display='none'">닫기</button>
 </div>
 
 <script>
     let dataPool = [];
+    let currentPage = 1;
+    const itemsPerPage = 10;
 
     window.onload = loadData;
 
@@ -158,27 +162,15 @@
 
     function checkAdmin() { if (prompt("PASSCODE") === "1234") document.getElementById('admin-panel').style.display='block'; }
 
-    function showManualInput() {
-        if (!document.getElementById('q-input').value) return alert("고민을 적어주세요.");
-        document.getElementById('main-btns').style.display = 'none';
-        document.getElementById('manual-input-ui').style.display = 'block';
-        document.getElementById('limit-msg').innerText = `1 ~ ${dataPool.length} 중 선택`;
-    }
-
-    function shuffle(array) {
-        return array.sort(() => Math.random() - 0.5);
-    }
-
     function launch(mode) {
-        if (!document.getElementById('q-input').value) return alert("고민을 적어주세요.");
-        
+        if (!document.getElementById('q-input').value) return alert("질문을 적어주세요.");
         let result;
         if (mode === 'random') {
             result = dataPool[Math.floor(Math.random() * dataPool.length)];
         } else {
             const num = parseInt(document.getElementById('page-num').value);
             if (isNaN(num) || num < 1 || num > dataPool.length) return alert("유효한 숫자를 입력하세요.");
-            result = shuffle([...dataPool])[num - 1];
+            result = [...dataPool].sort((a,b) => a.id - b.id)[num - 1];
         }
 
         document.getElementById('res-poster').src = result.poster_url;
@@ -192,24 +184,65 @@
     }
 
     function resetOracle() {
-        document.getElementById('q-input').value = "";
-        document.getElementById('page-num').value = "";
-        document.getElementById('manual-input-ui').style.display = 'none';
-        document.getElementById('main-btns').style.display = 'block';
+        // [수정] 닫힐 때 내용이 안 보이도록 투명도 즉시 제거
+        const pages = document.querySelectorAll('.page-inner');
+        pages.forEach(p => p.style.opacity = '0');
+
         document.getElementById('oracle-book').classList.remove('active');
         document.getElementById('retry-btn').classList.remove('show');
         document.getElementById('ui-main').style.opacity = '1';
-        setTimeout(() => { document.getElementById('cover-art').style.visibility = 'visible'; }, 1000);
+        
+        setTimeout(() => { 
+            document.getElementById('cover-art').style.visibility = 'visible';
+            document.getElementById('q-input').value = "";
+            document.getElementById('page-num').value = "";
+            document.getElementById('manual-input-ui').style.display = 'none';
+            document.getElementById('main-btns').style.display = 'block';
+            // 모션 완료 후 투명도 설정 원복 (다음 질문을 위해)
+            pages.forEach(p => p.style.opacity = ''); 
+        }, 1200);
     }
 
-    // [관리자 기능]
+    // [관리자 - 리스트 렌더링 및 페이징]
+    function renderAdminList() {
+        const searchTerm = document.getElementById('admin-list-search').value.toLowerCase();
+        const filteredData = dataPool.filter(item => item.title.toLowerCase().includes(searchTerm));
+        
+        const totalPages = Math.ceil(filteredData.length / itemsPerPage) || 1;
+        if (currentPage > totalPages) currentPage = totalPages;
+
+        const start = (currentPage - 1) * itemsPerPage;
+        const pagedData = filteredData.slice(start, start + itemsPerPage);
+
+        document.getElementById('page-info').innerText = `${currentPage} / ${totalPages}`;
+        document.getElementById('list-container').innerHTML = pagedData.map(item => `
+            <div style="display:flex; justify-content:space-between; align-items:center; background:#111; padding:8px; margin-bottom:5px; font-size:0.85rem; border-left: 2px solid #333;">
+                <span onclick="editItem('${item.id}')" style="cursor:pointer; color:var(--gold); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-right:10px;">${item.title}</span>
+                <button onclick="deleteItem('${item.id}')" style="color:#666; background:none; border:none; cursor:pointer; font-size:0.7rem;">삭제</button>
+            </div>
+        `).join('');
+    }
+
+    function changePage(direction) {
+        currentPage += direction;
+        const searchTerm = document.getElementById('admin-list-search').value.toLowerCase();
+        const filteredData = dataPool.filter(item => item.title.toLowerCase().includes(searchTerm));
+        const totalPages = Math.ceil(filteredData.length / itemsPerPage) || 1;
+        
+        if (currentPage < 1) currentPage = 1;
+        if (currentPage > totalPages) currentPage = totalPages;
+        renderAdminList();
+    }
+
+    // [관리자 - TMDB 검색 및 저장]
     async function searchTMDB() {
         const q = document.getElementById('tmdb-query').value;
+        if(!q) return;
         const res = await fetch(`/api/search?query=${encodeURIComponent(q)}`);
         const data = await res.json();
-        document.getElementById('search-results').innerHTML = data.results.map(item => `
+        document.getElementById('search-results').innerHTML = data.results.slice(0, 6).map(item => `
             <div class="search-item" onclick="selectDrama('${(item.title || item.name).replace(/'/g, "\\'")}', '${item.poster_path}')">
-                <img src="https://image.tmdb.org/t/p/w300${item.poster_path}">
+                <img src="https://image.tmdb.org/t/p/w200${item.poster_path}">
             </div>
         `).join('');
     }
@@ -219,6 +252,46 @@
         document.getElementById('selected-poster').value = `https://image.tmdb.org/t/p/w500${p}`;
         document.querySelectorAll('.search-item').forEach(el => el.classList.remove('selected'));
         event.currentTarget.classList.add('selected');
+    }
+
+    async function handleSave() {
+        const id = document.getElementById('edit-id').value;
+        const title = document.getElementById('selected-title').value;
+        const poster_url = document.getElementById('selected-poster').value;
+        const answer = document.getElementById('manual-answer').value;
+        if (!title || !answer) return alert("내용을 입력하세요.");
+
+        const method = id ? 'PUT' : 'POST';
+        const url = id ? `/api/dramas?id=${id}` : '/api/dramas';
+        const res = await fetch(url, {
+            method: method,
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ title, answer, poster_url })
+        });
+
+        if (res.ok) {
+            alert("저장되었습니다.");
+            resetAdminForm();
+            loadData();
+        }
+    }
+
+    function editItem(id) {
+        const item = dataPool.find(d => d.id == id);
+        if (!item) return;
+        document.getElementById('edit-id').value = item.id;
+        document.getElementById('selected-title').value = item.title;
+        document.getElementById('selected-poster').value = item.poster_url;
+        document.getElementById('manual-answer').value = item.answer;
+        document.getElementById('admin-title').innerText = "ADMIN: EDIT MODE";
+        window.scrollTo({top:0, behavior:'smooth'});
+    }
+
+    async function deleteItem(id) {
+        if(confirm("삭제하시겠습니까?")) {
+            await fetch(`/api/dramas?id=${id}`, { method: 'DELETE' });
+            loadData();
+        }
     }
 
     function resetAdminForm() {
@@ -231,62 +304,11 @@
         document.getElementById('admin-title').innerText = "ADMIN CONSOLE";
     }
 
-    async function handleSave() {
-        const id = document.getElementById('edit-id').value;
-        const title = document.getElementById('selected-title').value;
-        const poster_url = document.getElementById('selected-poster').value;
-        const answer = document.getElementById('manual-answer').value;
-
-        if (!title || !answer) return alert("정보를 모두 입력하세요.");
-
-        // 404 에러 방지: 쿼리 스트링(?id=) 방식으로 URL 구성
-        const method = id ? 'PUT' : 'POST';
-        const url = id ? `/api/dramas?id=${id}` : '/api/dramas';
-
-        try {
-            const res = await fetch(url, {
-                method: method,
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ title, answer, poster_url })
-            });
-
-            if (res.ok) {
-                alert(id ? "수정이 완료되었습니다." : "저장이 완료되었습니다.");
-                resetAdminForm(); // 성공 시 입력창 및 포스터 결과창 초기화
-                loadData();
-            } else {
-                alert("서버 오류: " + res.status);
-            }
-        } catch (e) {
-            alert("연결 실패: " + e.message);
-        }
-    }
-
-    function editItem(id) {
-        const item = dataPool.find(d => d.id == id);
-        if (!item) return;
-        document.getElementById('edit-id').value = item.id;
-        document.getElementById('selected-title').value = item.title;
-        document.getElementById('selected-poster').value = item.poster_url;
-        document.getElementById('manual-answer').value = item.answer;
-        document.getElementById('admin-title').innerText = "ADMIN: EDIT MODE";
-        document.getElementById('admin-panel').scrollTo(0, 0);
-    }
-
-    function renderAdminList() {
-        document.getElementById('list-container').innerHTML = dataPool.map(item => `
-            <div style="display:flex; justify-content:space-between; align-items:center; background:#111; padding:8px; margin-bottom:5px; font-size:0.85rem;">
-                <span onclick="editItem('${item.id}')" style="cursor:pointer; color:var(--gold); flex:1;">${item.title}</span>
-                <button onclick="deleteItem('${item.id}')" style="color:#666; background:none; border:none; cursor:pointer;">삭제</button>
-            </div>
-        `).join('');
-    }
-
-    async function deleteItem(id) {
-        if(confirm("삭제하시겠습니까?")) {
-            await fetch(`/api/dramas?id=${id}`, { method: 'DELETE' });
-            loadData();
-        }
+    function showManualInput() {
+        if (!document.getElementById('q-input').value) return alert("질문을 적어주세요.");
+        document.getElementById('main-btns').style.display = 'none';
+        document.getElementById('manual-input-ui').style.display = 'block';
+        document.getElementById('limit-msg').innerText = `1 ~ ${dataPool.length} 페이지 중 선택`;
     }
 </script>
 </body>
