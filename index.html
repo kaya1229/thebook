@@ -2,212 +2,191 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>드라마 해답의 책</title>
+    <title>드라마 해답의 책 - 3D 리얼리티</title>
     <style>
         :root {
-            --book-color: #2c3e50;
-            --page-color: #fdfdfd;
+            --book-width: 350px;
+            --book-height: 480px;
+            --book-thickness: 50px; /* 책의 두께 */
+            --cover-color: #34495e;
+            --spine-color: #2c3e50;
+            --paper-color: #f9f9f9;
         }
 
         body {
-            background-color: #121212;
-            color: #eee;
-            font-family: 'Apple SD Gothic Neo', sans-serif;
+            background-color: #1a1a1a;
+            color: #fff;
             display: flex;
             flex-direction: column;
             align-items: center;
             min-height: 100vh;
             margin: 0;
-            padding-top: 50px;
-            overflow-x: hidden;
-        }
-
-        .container { text-align: center; width: 100%; max-width: 900px; z-index: 2; }
-
-        /* 입력 섹션 */
-        .input-section { margin-bottom: 30px; transition: opacity 0.5s; }
-        input[type="text"] {
-            width: 70%; padding: 15px; border: none; border-bottom: 2px solid #555;
-            background: transparent; color: #fff; font-size: 1.2rem; text-align: center; outline: none;
-        }
-
-        .btn-group { display: flex; gap: 10px; justify-content: center; margin-top: 20px; }
-        button {
-            padding: 12px 24px; background: #333; color: #fff; border: 1px solid #555;
-            cursor: pointer; transition: 0.3s;
-        }
-        button:hover { background: #eee; color: #000; }
-
-        /* 책 레이아웃 */
-        .book-scene {
+            padding-top: 30px;
             perspective: 2000px;
-            width: 400px;
-            height: 500px;
-            margin: 40px auto;
-            position: relative;
         }
 
-        .book {
-            width: 100%;
-            height: 100%;
+        /* 입력 UI */
+        .ui-container { text-align: center; margin-bottom: 50px; z-index: 100; }
+        input { padding: 10px; width: 300px; background: #333; border: 1px solid #555; color: white; }
+        button { padding: 10px 20px; cursor: pointer; background: #444; color: white; border: none; margin: 5px; }
+        button:hover { background: #666; }
+
+        /* 3D 책 컨테이너 */
+        .book-container {
+            width: var(--book-width);
+            height: var(--book-height);
             position: relative;
             transform-style: preserve-3d;
-            transition: transform 1.5s cubic-bezier(0.645, 0.045, 0.355, 1);
-            cursor: default;
+            transition: transform 1.5s ease-in-out;
+            transform: rotateY(-20deg) rotateX(10deg); /* 초기 비스듬한 각도 */
         }
 
-        /* 책의 각 면 */
-        .page {
+        /* 책의 공통 면 스타일 */
+        .book-face {
             position: absolute;
-            width: 100%;
-            height: 100%;
-            top: 0;
-            left: 0;
-            background: var(--page-color);
-            color: #222;
-            box-shadow: inset 3px 0px 20px rgba(0,0,0,0.1);
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 30px;
-            box-sizing: border-box;
-            backface-visibility: hidden; /* 뒷면 숨김 */
+            backface-visibility: hidden;
         }
 
-        /* 표지 (겉면) */
-        .cover {
-            background: var(--book-color);
-            color: #f1c40f;
-            font-size: 2rem;
-            font-weight: bold;
-            border-radius: 0 5px 5px 0;
-            z-index: 5;
+        /* 1. 앞표지 */
+        .front {
+            width: 100%; height: 100%;
+            background: var(--cover-color);
+            z-index: 10;
             transform-origin: left;
-            transition: transform 1.5s;
-        }
-
-        /* 내부 결과 페이지 (왼쪽/오른쪽) */
-        .page-content-left { 
-            transform: rotateY(-180deg); /* 미리 뒤집어둠 */
-            transform-origin: right;
-            border-radius: 5px 0 0 5px;
-            z-index: 4;
-        }
-        
-        .page-content-right {
-            z-index: 3;
+            transition: transform 1.5s ease-in-out;
             border-radius: 0 5px 5px 0;
+            box-shadow: inset -2px 0 5px rgba(0,0,0,0.3);
+            transform: translateZ(calc(var(--book-thickness) / 2));
+        }
+        .front-content { border: 2px solid #f1c40f; padding: 40px; color: #f1c40f; font-size: 2rem; font-weight: bold; }
+
+        /* 2. 뒷표지 */
+        .back {
+            width: 100%; height: 100%;
+            background: var(--cover-color);
+            transform: rotateY(180deg) translateZ(calc(var(--book-thickness) / 2));
+            border-radius: 5px 0 0 5px;
         }
 
-        /* 애니메이션 실행 시 클래스 */
-        .book.open .cover { transform: rotateY(-180deg); }
-        .book.open .page-content-left { transform: rotateY(0deg); left: -100%; }
-
-        /* 결과 스타일 */
-        .poster { width: 80%; max-height: 300px; object-fit: cover; box-shadow: 10px 10px 20px rgba(0,0,0,0.3); }
-        .drama-title { margin-top: 15px; font-size: 1rem; color: #777; }
-        .answer-text {
-            font-family: "Gungsuh", "궁서", serif;
-            font-size: 1.8rem;
-            line-height: 1.6;
-            text-align: center;
-            word-break: keep-all;
+        /* 3. 책등 (Spine) */
+        .spine {
+            width: var(--book-thickness);
+            height: 100%;
+            background: var(--spine-color);
+            left: 0;
+            transform: translateX(calc(var(--book-thickness) / -2)) rotateY(-90deg);
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
         }
 
-        #page-input-modal { display: none; margin-top: 15px; }
-        #page-number { width: 100px; padding: 10px; text-align: center; }
+        /* 4. 오른쪽 옆면 (종이 뭉치 느낌) */
+        .right-side {
+            width: var(--book-thickness);
+            height: calc(100% - 10px);
+            background: #eee;
+            background-image: linear-gradient(90deg, #ddd 1px, transparent 1px);
+            background-size: 3px 100%; /* 종이 결 표현 */
+            right: 0;
+            top: 5px;
+            transform: translateX(calc(var(--book-thickness) / 2)) rotateY(90deg);
+        }
+
+        /* 내부 페이지 (결과 노출용) */
+        .internal-page {
+            width: calc(100% - 10px);
+            height: calc(100% - 10px);
+            background: var(--paper-color);
+            position: absolute;
+            top: 5px; left: 5px;
+            z-index: 5;
+            color: #222;
+            padding: 20px;
+            box-sizing: border-box;
+            display: none; /* 펼쳐지기 전엔 숨김 */
+        }
+
+        /* 애니메이션 동작 */
+        .book-container.open {
+            transform: rotateY(0deg) rotateX(0deg) translateX(50%);
+        }
+        .book-container.open .front {
+            transform: translateZ(calc(var(--book-thickness) / 2)) rotateY(-160deg);
+        }
+        .book-container.open .internal-page {
+            display: flex;
+            flex-direction: column;
+            animation: fadeIn 0.5s forwards 1s;
+            opacity: 0;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* 결과 디자인 */
+        .res-poster { width: 100%; height: 250px; object-fit: cover; box-shadow: 2px 2px 10px rgba(0,0,0,0.2); }
+        .res-answer { font-family: "Gungsuh", "궁서", serif; font-size: 1.5rem; text-align: center; margin-top: 20px; color: #111; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div class="input-section" id="ui-top">
-        <h1>드라마 해답의 책</h1>
-        <input type="text" id="user-question" placeholder="고민을 입력하세요...">
-        <div class="btn-group">
-            <button onclick="handleAction('random')">랜덤으로 펼치기</button>
-            <button onclick="showPageInput()">직접 페이지 입력</button>
-        </div>
-        <div id="page-input-modal">
-            <input type="number" id="page-number" placeholder="1-500" min="1" max="500">
-            <button onclick="handleAction('manual')">확인</button>
-        </div>
+<div class="ui-container">
+    <h1>드라마 해답의 책</h1>
+    <input type="text" id="question" placeholder="고민을 입력하세요...">
+    <div>
+        <button onclick="reveal('random')">자동 랜덤 페이지</button>
+        <button onclick="document.getElementById('manual-ui').style.display='block'">페이지 직접 입력</button>
     </div>
-
-    <!-- 책 오브젝트 -->
-    <div class="book-scene">
-        <div class="book" id="main-book">
-            <!-- 표지 -->
-            <div class="page cover" id="book-cover">
-                <div style="border: 2px solid #f1c40f; padding: 20px;">解答</div>
-            </div>
-            
-            <!-- 왼쪽 페이지 (결과: 드라마 포스터) -->
-            <div class="page page-content-left">
-                <img id="res-poster" src="" alt="포스터" class="poster">
-                <div id="res-title" class="drama-title"></div>
-            </div>
-
-            <!-- 오른쪽 페이지 (결과: 해답 문구) -->
-            <div class="page page-content-right">
-                <div id="res-answer" class="answer-text"></div>
-            </div>
-        </div>
+    <div id="manual-ui" style="display:none; margin-top:10px;">
+        <input type="number" id="page-num" placeholder="1-500" style="width:60px;">
+        <button onclick="reveal('manual')">확인</button>
     </div>
+</div>
+
+<div class="book-container" id="myBook">
+    <!-- 책등 -->
+    <div class="book-face spine"></div>
+    <!-- 뒷표지 -->
+    <div class="book-face back"></div>
+    <!-- 종이 옆면 -->
+    <div class="book-face right-side"></div>
     
-    <button id="reset-btn" onclick="location.reload()" style="display:none; margin-top: 20px;">다시 물어보기</button>
+    <!-- 앞표지 -->
+    <div class="book-face front" id="frontCover">
+        <div class="front-content">解答</div>
+    </div>
+
+    <!-- 내부 페이지 (왼쪽: 포스터 / 실제론 앞표지 뒷면 느낌) -->
+    <div class="internal-page" style="transform: rotateY(-180deg); left: -100%; width: 100%; height: 100%; top: 0; border-radius: 5px 0 0 5px;">
+        <img id="res-img" src="" class="res-poster">
+        <p id="res-title" style="font-size: 0.9rem; color: #888;"></p>
+    </div>
+
+    <!-- 내부 페이지 (오른쪽: 해답) -->
+    <div class="internal-page" style="left: 0; width: 100%; height: 100%; top: 0; border-radius: 0 5px 5px 0; border-left: 1px solid #ddd;">
+        <div id="res-text" class="res-answer"></div>
+    </div>
 </div>
 
 <script>
-    const dramaData = [
-        { title: "랑야방", answer: "치밀하게 설계하고\n침묵으로 실행하라.", poster: "https://via.placeholder.com/240x350?text=Nirvana+In+Fire" },
-        { title: "강철삼림", answer: "결국 모든 것은 타이밍이다.\n망설이지 마라.", poster: "https://via.placeholder.com/240x350?text=Steel+Forest" },
-        { title: "창란결", answer: "본능에 몸을 맡기고\n운명을 뒤집어라.", poster: "https://via.placeholder.com/240x350?text=Orchid+Magic" },
-        { title: "미생", answer: "죽어있는 수라면\n과감히 버려라.", poster: "https://via.placeholder.com/240x350?text=Misaeng" },
-        { title: "나의 아저씨", answer: "아무것도 아니다.\n네가 그렇게 믿으면 된다.", poster: "https://via.placeholder.com/240x350?text=My+Mister" }
+    const data = [
+        { t: "랑야방", a: "치밀하게 설계하고\n침묵으로 실행하라.", p: "https://via.placeholder.com/300x400/34495e/fff?text=Nirvana" },
+        { t: "강철삼림", a: "결국 모든 것은 타이밍이다.\n망설이지 마라.", p: "https://via.placeholder.com/300x400/2c3e50/fff?text=Steel" },
+        { t: "창란결", a: "본능에 몸을 맡기고\n운명을 뒤집어라.", p: "https://via.placeholder.com/300x400/e67e22/fff?text=Orchid" }
     ];
 
-    function showPageInput() {
-        document.getElementById('page-input-modal').style.display = 'block';
-    }
+    function reveal(mode) {
+        const q = document.getElementById('question').value;
+        if(!q) return alert("고민을 입력하세요.");
 
-    function handleAction(mode) {
-        const q = document.getElementById('user-question').value;
-        if (!q) { alert("고민을 입력해주세요!"); return; }
+        const num = mode === 'random' ? Math.floor(Math.random()*500) : document.getElementById('page-num').value;
+        const result = data[num % data.length];
 
-        let pageNum;
-        if (mode === 'random') {
-            pageNum = Math.floor(Math.random() * 500) + 1;
-        } else {
-            pageNum = document.getElementById('page-number').value;
-            if (!pageNum) return;
-        }
+        document.getElementById('res-img').src = result.p;
+        document.getElementById('res-title').innerText = result.t;
+        document.getElementById('res-text').innerText = `"${result.a}"`;
 
-        // 데이터 섞기 및 결과 추출
-        const shuffled = [...dramaData].sort(() => Math.random() - 0.5);
-        const result = shuffled[pageNum % shuffled.length];
-
-        // 결과 삽입
-        document.getElementById('res-poster').src = result.poster;
-        document.getElementById('res-title').innerText = result.title;
-        document.getElementById('res-answer').innerText = `"${result.answer}"`;
-
-        // 애니메이션 실행
-        openBook();
-    }
-
-    function openBook() {
-        document.getElementById('ui-top').style.opacity = '0.3';
-        document.getElementById('ui-top').style.pointerEvents = 'none';
-        
-        const book = document.getElementById('main-book');
-        book.classList.add('open');
-
-        setTimeout(() => {
-            document.getElementById('reset-btn').style.display = 'inline-block';
-        }, 1500);
+        document.getElementById('myBook').classList.add('open');
     }
 </script>
 
