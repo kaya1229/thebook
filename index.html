@@ -98,7 +98,7 @@
             box-shadow: inset 10px 0 30px rgba(0,0,0,0.05);
         }
 
-        /* 🎬 펼쳐진 상태 (수정): translateY(-10%)를 추가해 책을 살짝 위로 올림 */
+        /* 🎬 펼쳐진 상태: translateY(-10%)를 추가해 책을 살짝 위로 올림 */
         .book-container.active {
             animation: none;
             transform: rotateY(0deg) rotateX(0deg) translateZ(150px) translateX(50%) translateY(-10%);
@@ -111,7 +111,7 @@
         .poster-box img { max-width: 90%; max-height: 100%; box-shadow: 0 15px 35px rgba(0,0,0,0.4); }
         .answer-txt { font-family: "Gungsuh", "궁서", serif; font-size: 2.2rem; text-align: center; line-height: 1.6; word-break: keep-all; }
         
-        /* 🎬 버튼 위치 수정: 화면 하단에 안정적으로 배치 */
+        /* 🎬 새로운 질문 던지기 버튼 */
         #retry-btn { 
             position: absolute; 
             bottom: 12%; 
@@ -125,6 +125,22 @@
             opacity: 1; 
             pointer-events: auto; 
             transform: translateY(0);
+        }
+
+        /* 관리자 패널 스타일 */
+        #admin-panel {
+            display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(10, 10, 10, 0.98); border: 1px solid var(--gold); padding: 30px;
+            z-index: 1000; border-radius: 8px; width: 380px; box-shadow: 0 0 50px rgba(0,0,0,1);
+        }
+        #admin-panel input, #admin-panel textarea {
+            width: 100%; padding: 12px; margin-bottom: 15px; background: #1a1a1a;
+            border: 1px solid #333; color: #fff; font-family: inherit; box-sizing: border-box;
+            outline: none;
+        }
+        .admin-trigger {
+            position: fixed; bottom: 0; right: 0; width: 40px; height: 40px;
+            cursor: default; opacity: 0; z-index: 999;
         }
     </style>
 </head>
@@ -168,13 +184,103 @@
 
 <button id="retry-btn" class="btn-gold" onclick="location.reload()">새로운 질문 던지기</button>
 
+<!-- 관리자 모드 진입용 숨겨진 버튼 (우측 하단 구석) -->
+<div class="admin-trigger" onclick="checkAdmin()"></div>
+
+<!-- 관리자 패널 UI -->
+<div id="admin-panel">
+    <h2 style="margin: 0 0 20px 0; font-weight: 300; letter-spacing: 2px; color: var(--gold);">ADMIN MODE</h2>
+    <input type="text" id="tmdb-query" placeholder="드라마 제목 검색">
+    <textarea id="manual-answer" placeholder="이 드라마가 줄 해답 문구"></textarea>
+    <div style="display: flex; gap: 10px;">
+        <button class="btn-gold" style="flex: 2;" onclick="fetchDrama()">데이터 추가</button>
+        <button class="btn-gold" style="flex: 1; border-color: #555; color: #888;" onclick="closeAdmin()">닫기</button>
+    </div>
+    <p id="admin-status" style="font-size: 0.8rem; margin-top: 15px; color: #888;"></p>
+</div>
+
+<!-- Supabase SDK 추가 -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <script>
-    const dataPool = [
-        { t: "랑야방", a: "치밀하게 설계하고\n침묵으로 실행하라.", p: "https://via.placeholder.com/220x310/161b22/d4af37?text=Nirvana" },
-        { t: "강철삼림", a: "결국 모든 것은 타이밍이다.\n망설이지 마라.", p: "https://via.placeholder.com/220x310/161b22/d4af37?text=Steel+Forest" },
-        { t: "창란결", a: "본능에 몸을 맡기고\n운명을 뒤집어라.", p: "https://via.placeholder.com/220x310/161b22/d4af37?text=Orchid" },
-        { t: "미생", a: "죽어있는 수라면\n과감히 버려라.", p: "https://via.placeholder.com/220x310/161b22/d4af37?text=Misaeng" }
-    ];
+    // 1. Supabase 설정 (본인의 정보로 교체 필수)
+    const supabaseUrl = 'YOUR_SUPABASE_URL';
+    const supabaseKey = 'YOUR_SUPABASE_ANON_KEY';
+    const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+    let dataPool = [];
+
+    // 페이지 로드 시 Supabase DB에서 데이터 가져오기
+    window.onload = async () => {
+        const { data, error } = await _supabase.from('dramas').select('*');
+        if (data && data.length > 0) {
+            // 가져온 데이터를 기존 dataPool 형식에 맞게 맵핑
+            dataPool = data.map(d => ({ 
+                t: d.title, 
+                a: d.answer, 
+                p: d.poster_url 
+            }));
+        } else {
+            // DB가 비어있을 경우 초기 데이터 표시
+            dataPool = [
+                { t: "데이터 없음", a: "관리자 모드에서 드라마를 추가해주세요.", p: "https://via.placeholder.com/220x310/161b22/d4af37?text=Empty" }
+            ];
+        }
+    };
+
+    function checkAdmin() {
+        const pw = prompt("관리자 암호를 입력하세요.");
+        if (pw === "1234") { // 비밀번호 설정
+            document.getElementById('admin-panel').style.display = 'block';
+        }
+    }
+
+    function closeAdmin() {
+        document.getElementById('admin-panel').style.display = 'none';
+        document.getElementById('admin-status').innerText = "";
+    }
+
+    // Vercel Serverless Function(/api/search)을 통해 TMDB 검색 및 DB 저장
+    async function fetchDrama() {
+        const query = document.getElementById('tmdb-query').value;
+        const answer = document.getElementById('manual-answer').value;
+        const status = document.getElementById('admin-status');
+
+        if (!query || !answer) return alert("내용을 모두 입력해주세요.");
+        status.innerText = "TMDB에서 데이터를 찾는 중...";
+
+        try {
+            // Vercel API Route 호출 (API Key가 서버에 숨겨져 있음)
+            const res = await fetch(`/api/search?query=${encodeURIComponent(query)}`);
+            const searchData = await res.json();
+
+            if (searchData.results && searchData.results.length > 0) {
+                const item = searchData.results[0];
+                const posterPath = `https://image.tmdb.org/t/p/w500${item.poster_path}`;
+                
+                status.innerText = "드라마 발견! Supabase에 저장 중...";
+
+                // Supabase 'dramas' 테이블에 저장
+                const { error } = await _supabase.from('dramas').insert([
+                    { title: item.name, answer: answer, poster_url: posterPath }
+                ]);
+
+                if (!error) {
+                    status.innerText = `성공: [${item.name}] 추가 완료.`;
+                    document.getElementById('tmdb-query').value = "";
+                    document.getElementById('manual-answer').value = "";
+                    // 1.5초 후 데이터 갱신을 위해 새로고침
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    status.innerText = "Supabase 저장 실패: " + error.message;
+                }
+            } else {
+                status.innerText = "검색 결과가 없습니다.";
+            }
+        } catch (e) {
+            status.innerText = "통신 오류 발생: " + e.message;
+        }
+    }
 
     function showInput() {
         document.getElementById('btn-group').style.display = 'none';
@@ -202,7 +308,7 @@
         setTimeout(() => {
             document.getElementById('cover-art').style.visibility = 'hidden';
             document.getElementById('retry-btn').classList.add('show');
-        }, 1500); // 연출 흐름에 맞춰 타이밍 소폭 조정
+        }, 1500);
     }
 </script>
 
